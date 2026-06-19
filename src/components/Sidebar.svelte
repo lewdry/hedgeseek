@@ -143,5 +143,8 @@
       Regenerate
     </button>
     <ExportButton />
+    <p class="text-xs text-base-content/50 italic text-left mt-1">
+      By <a href="https://lewisdryburgh.com" target="_blank" rel="noopener noreferrer" class="link link-hover">Lewis Dryburgh</a>
+    </p>
   </section>
 </aside>
