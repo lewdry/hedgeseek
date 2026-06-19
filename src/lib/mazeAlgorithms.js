@@ -233,7 +233,7 @@ function preferredBorderCandidates(grid, W, H, edge) {
 }
 
 // Pick randomly from the middle y% of candidates ranked by BFS distance
-// (i.e. the 45th–70th percentile). Avoids both trivially short and
+// (i.e. the 55th–70th percentile). Avoids both trivially short and
 // suspiciously perfect extreme routes.
 function farthestCandidate(candidates, dist, W) {
   const scored = candidates
@@ -242,8 +242,8 @@ function farthestCandidate(candidates, dist, W) {
     .sort((a, b) => a.d - b.d);
 
   if (scored.length === 0) return pickRandom(candidates);
-  const lo = Math.floor(scored.length * 0.45);
-  const hi = Math.ceil(scored.length * 0.7);
+  const lo = Math.floor(scored.length * 0.55);
+  const hi = Math.ceil(scored.length * 0.70);
   return pickRandom(scored.slice(lo, hi)).c;
 }
 

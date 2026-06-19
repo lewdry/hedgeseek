@@ -29,8 +29,8 @@
     { id: TOOL.PATH,     label: 'Path',     icon: Footprints, activeClass: 'btn-primary'   },
     { id: TOOL.HEDGE,    label: 'Hedge',    icon: Trees,      activeClass: 'btn-primary'   },
     { id: TOOL.ENTRANCE, label: 'Entrance', icon: DoorOpen,   activeClass: 'btn-secondary' },
-    { id: TOOL.EXIT,     label: 'Exit',     icon: DoorClosed, activeClass: 'btn-accent'    },
-    { id: TOOL.PLAZA,    label: 'Goal',     icon: Star,       activeClass: 'btn-accent'    }
+    { id: TOOL.PLAZA,    label: 'Goal',     icon: Star,       activeClass: 'btn-accent'    },
+    { id: TOOL.EXIT,     label: 'Exit',     icon: DoorClosed, activeClass: 'btn-accent'    }
   ];
 
   // Canvas ref forwarded from CanvasView for the export button.
@@ -76,16 +76,16 @@
     <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Objective</h2>
     <div class="join w-full">
       <button
-        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'exit' ? 'btn-primary' : 'btn-ghost'}"
-        onclick={() => (endpointType = 'exit')}
-      >
-        Exit
-      </button>
-      <button
         class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'goal' ? 'btn-primary' : 'btn-ghost'}"
         onclick={() => (endpointType = 'goal')}
       >
         Goal
+      </button>
+      <button
+        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'exit' ? 'btn-primary' : 'btn-ghost'}"
+        onclick={() => (endpointType = 'exit')}
+      >
+        Exit
       </button>
     </div>
   </section>

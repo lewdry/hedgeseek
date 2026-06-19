@@ -8,7 +8,7 @@
 
   let W = $state(21);
   let H = $state(21);
-  let endpointType = $state('exit');
+  let endpointType = $state('goal');
   let currentTool = $state(TOOL.SOLVE);
   let gridData = $state(new Uint8Array(0));
 
