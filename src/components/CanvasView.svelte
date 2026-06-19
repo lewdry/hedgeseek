@@ -200,7 +200,7 @@
   <canvas
     bind:this={canvasEl}
     class="cursor-crosshair rounded shadow-lg"
-    style="image-rendering: pixelated;"
+    style="image-rendering: pixelated; touch-action: none;"
     onpointerdown={handlePointerDown}
     onpointermove={handlePointerMove}
     onpointerup={handlePointerUp}
