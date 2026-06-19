@@ -16,8 +16,14 @@ function shuffle(arr) {
 
 // Iterative recursive backtracker (stack-based to avoid call-stack overflow on large grids).
 // `visited` is passed in so the caller can pre-mark cells (e.g. a plaza) before carving starts.
+// Uses directional momentum: X% chance to continue in the same direction, producing longer,
+// straighter corridors instead of the dense zig-zag aesthetic of a fully random backtracker.
+const STRAIGHT_BIAS = 0.6;
+
 function carve(grid, W, H, startX, startY, visited) {
-  const stack = [{ x: startX, y: startY }];
+  // Each stack frame carries the cell coords and the direction we arrived from.
+  // lastDir is {dx, dy} in cell-space (step of 2), or null for the start.
+  const stack = [{ x: startX, y: startY, lastDir: null }];
 
   grid[coordToIndex(startX, startY, W)] = TOOL.PATH;
   visited[coordToIndex(startX, startY, W)] = 1;
@@ -33,13 +39,79 @@ function carve(grid, W, H, startX, startY, visited) {
     if (unvisited.length === 0) {
       stack.pop();
     } else {
-      const { cell, wall } = shuffle(unvisited)[0];
+      // Annotate each candidate with its direction from the current cell.
+      const candidates = unvisited.map(({ cell, wall }) => ({
+        cell,
+        wall,
+        dx: cell.x - current.x,
+        dy: cell.y - current.y,
+      }));
+
+      let chosen;
+      if (
+        current.lastDir !== null &&
+        Math.random() < STRAIGHT_BIAS
+      ) {
+        // Try to continue straight.
+        const straight = candidates.find(
+          c => c.dx === current.lastDir.dx && c.dy === current.lastDir.dy
+        );
+        chosen = straight ?? shuffle(candidates)[0];
+      } else {
+        chosen = shuffle(candidates)[0];
+      }
+
+      const { cell, wall, dx, dy } = chosen;
       // Carve through the wall cell
       grid[coordToIndex(wall.x, wall.y, W)] = TOOL.PATH;
       grid[coordToIndex(cell.x, cell.y, W)] = TOOL.PATH;
       visited[coordToIndex(wall.x, wall.y, W)] = 1;
       visited[coordToIndex(cell.x, cell.y, W)] = 1;
-      stack.push(cell);
+      stack.push({ x: cell.x, y: cell.y, lastDir: { dx, dy } });
+    }
+  }
+}
+
+// Braid the maze by removing dead ends. `amount` is the probability [0,1] that
+// any given dead end gets a loop punched through it.
+function braid(grid, W, H, amount) {
+  for (let y = 1; y < H - 1; y += 2) {
+    for (let x = 1; x < W - 1; x += 2) {
+      if (grid[coordToIndex(x, y, W)] !== TOOL.PATH) continue;
+
+      // Build the four direction descriptors: wx/wy = wall cell, cx/cy = passage cell beyond.
+      const dirs = [
+        { wx: x,     wy: y - 1, cx: x,     cy: y - 2 },
+        { wx: x,     wy: y + 1, cx: x,     cy: y + 2 },
+        { wx: x - 1, wy: y,     cx: x - 2, cy: y     },
+        { wx: x + 1, wy: y,     cx: x + 2, cy: y     },
+      ].filter(d => d.cx >= 1 && d.cx < W - 1 && d.cy >= 1 && d.cy < H - 1);
+
+      const open   = dirs.filter(d => grid[coordToIndex(d.wx, d.wy, W)] === TOOL.PATH);
+      if (open.length !== 1) continue; // not a dead end
+
+      if (Math.random() > amount) continue;
+
+      const closed = dirs.filter(d => grid[coordToIndex(d.wx, d.wy, W)] === TOOL.HEDGE);
+      if (closed.length === 0) continue;
+
+      // Prefer walls leading into another dead end so two dead ends cancel each other.
+      closed.sort((a, b) => {
+        const deadEndScore = d => {
+          const neighbDirs = [
+            { wx: d.cx,     wy: d.cy - 1, cx: d.cx,     cy: d.cy - 2 },
+            { wx: d.cx,     wy: d.cy + 1, cx: d.cx,     cy: d.cy + 2 },
+            { wx: d.cx - 1, wy: d.cy,     cx: d.cx - 2, cy: d.cy     },
+            { wx: d.cx + 1, wy: d.cy,     cx: d.cx + 2, cy: d.cy     },
+          ].filter(n => n.cx >= 1 && n.cx < W - 1 && n.cy >= 1 && n.cy < H - 1);
+          const neighbourOpen = neighbDirs.filter(n => grid[coordToIndex(n.wx, n.wy, W)] === TOOL.PATH);
+          return neighbDirs.length > 0 && neighbourOpen.length === 1 ? 1 : 0;
+        };
+        return deadEndScore(b) - deadEndScore(a); // dead ends first
+      });
+
+      const pick = closed[0];
+      grid[coordToIndex(pick.wx, pick.wy, W)] = TOOL.PATH;
     }
   }
 }
@@ -64,6 +136,42 @@ function nearestPathCell(grid, W, H, targetX, targetY) {
 
 function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Multi-source BFS from an array of start indices.
+// Returns Int32Array of distances (-1 = unreachable).
+// Treats everything except TOOL.HEDGE as walkable (matches solveMaze rules).
+function bfsDistances(grid, W, H, startIndices) {
+  const dist = new Int32Array(W * H).fill(-1);
+  const queue = [];
+  for (const idx of startIndices) {
+    if (dist[idx] === -1) {
+      dist[idx] = 0;
+      queue.push(idx);
+    }
+  }
+  let head = 0;
+  while (head < queue.length) {
+    const idx = queue[head++];
+    const { x, y } = indexToCoord(idx, W);
+    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      const ni = coordToIndex(nx, ny, W);
+      if (dist[ni] !== -1 || grid[ni] === TOOL.HEDGE) continue;
+      dist[ni] = dist[idx] + 1;
+      queue.push(ni);
+    }
+  }
+  return dist;
+}
+
+// Return the inner-border PATH cell adjacent to a border candidate.
+function innerCell(c, W, H) {
+  if (c.y === 0)     return { x: c.x, y: 1 };
+  if (c.y === H - 1) return { x: c.x, y: H - 2 };
+  if (c.x === 0)     return { x: 1,     y: c.y };
+                     return { x: W - 2,  y: c.y };
 }
 
 // PATH cells live at odd coords; the border row/col is always wall.
@@ -94,33 +202,131 @@ function borderCandidates(grid, W, H, edge) {
   return candidates;
 }
 
+// Priority tier for a passage cell as a border entry point:
+// 0 = dead end, 1 = corner, 2 = straight corridor or junction.
+function borderEntryTier(grid, W, H, x, y) {
+  const dirs = [[0, -1], [0, 1], [1, 0], [-1, 0]];
+  const open = dirs.filter(([dx, dy]) => {
+    const wx = x + dx, wy = y + dy;
+    return wx >= 0 && wx < W && wy >= 0 && wy < H && grid[coordToIndex(wx, wy, W)] === TOOL.PATH;
+  });
+  if (open.length === 1) return 0; // dead end
+  if (open.length === 2) {
+    const [[dx0, dy0], [dx1, dy1]] = open;
+    const opposite = dx0 + dx1 === 0 && dy0 + dy1 === 0;
+    return opposite ? 2 : 1; // straight corridor vs corner
+  }
+  return 2; // junction
+}
+
+// Return border candidates at the best available tier (0→1→all fallback).
+function preferredBorderCandidates(grid, W, H, edge) {
+  const all = borderCandidates(grid, W, H, edge);
+  for (const tier of [0, 1]) {
+    const filtered = all.filter(c => {
+      const ic = innerCell(c, W, H);
+      return borderEntryTier(grid, W, H, ic.x, ic.y) === tier;
+    });
+    if (filtered.length > 0) return filtered;
+  }
+  return all;
+}
+
+// Pick randomly from the middle y% of candidates ranked by BFS distance
+// (i.e. the 40th–70th percentile). Avoids both trivially short and
+// suspiciously perfect extreme routes.
+function farthestCandidate(candidates, dist, W) {
+  const scored = candidates
+    .map(c => ({ c, d: dist[coordToIndex(c.x, c.y, W)] }))
+    .filter(s => s.d >= 0)
+    .sort((a, b) => a.d - b.d);
+
+  if (scored.length === 0) return pickRandom(candidates);
+  const lo = Math.floor(scored.length * 0.4);
+  const hi = Math.ceil(scored.length * 0.7);
+  return pickRandom(scored.slice(lo, hi)).c;
+}
+
 function placeEndpoints(grid, W, H, endpointType) {
   if (endpointType === 'goal') {
-    // Plaza is already seeded in generateMaze; just punch a single entrance on a random border edge.
-    const edges = ['top', 'bottom', 'left', 'right'];
-    shuffle(edges);
-    for (const edge of edges) {
-      const candidates = borderCandidates(grid, W, H, edge);
-      if (candidates.length > 0) {
-        const entry = pickRandom(candidates);
-        grid[coordToIndex(entry.x, entry.y, W)] = TOOL.ENTRANCE;
-        break;
+    // Plaza is fixed at the centre. Place the entrance as far from it as possible.
+    let plazaIdx = -1;
+    for (let i = 0; i < grid.length; i++) {
+      if (grid[i] === TOOL.PLAZA) { plazaIdx = i; break; }
+    }
+
+    if (plazaIdx === -1) {
+      // Fallback: random edge (shouldn't happen in normal flow)
+      const edges = ['top', 'bottom', 'left', 'right'];
+      shuffle(edges);
+      for (const edge of edges) {
+        const candidates = borderCandidates(grid, W, H, edge);
+        if (candidates.length > 0) {
+          grid[coordToIndex(pickRandom(candidates).x, pickRandom(candidates).y, W)] = TOOL.ENTRANCE;
+          break;
+        }
+      }
+      return;
+    }
+
+    const dist = bfsDistances(grid, W, H, [plazaIdx]);
+    let best = null, bestD = -1;
+    for (const edge of ['top', 'bottom', 'left', 'right']) {
+      for (const c of preferredBorderCandidates(grid, W, H, edge)) {
+        const ic = innerCell(c, W, H);
+        const d = dist[coordToIndex(ic.x, ic.y, W)];
+        if (d > bestD) { bestD = d; best = c; }
       }
     }
-  } else {
-    // 'exit': ENTRANCE top/left boundary, EXIT bottom/right boundary.
-    const pair = Math.random() < 0.5 ? ['top', 'bottom'] : ['left', 'right'];
-    const entranceCandidates = borderCandidates(grid, W, H, pair[0]);
-    const exitCandidates = borderCandidates(grid, W, H, pair[1]);
+    if (best) grid[coordToIndex(best.x, best.y, W)] = TOOL.ENTRANCE;
 
-    if (entranceCandidates.length > 0) {
-      const entry = pickRandom(entranceCandidates);
-      grid[coordToIndex(entry.x, entry.y, W)] = TOOL.ENTRANCE;
+  } else {
+    // 'exit': pick the entrance/exit pair (opposite sides) that maximises BFS distance.
+    function bestPairForAxis(sideA, sideB) {
+      const cA = preferredBorderCandidates(grid, W, H, sideA);
+      const cB = preferredBorderCandidates(grid, W, H, sideB);
+      if (!cA.length || !cB.length) return null;
+
+      // Find the entrance (sideA) that is farthest from any exit (sideB).
+      const distFromB = bfsDistances(grid, W, H,
+        cB.map(c => { const ic = innerCell(c, W, H); return coordToIndex(ic.x, ic.y, W); })
+      );
+      const entrance = farthestCandidate(
+        cA,
+        Object.fromEntries(cA.map(c => {
+          const ic = innerCell(c, W, H);
+          return [coordToIndex(c.x, c.y, W), distFromB[coordToIndex(ic.x, ic.y, W)]];
+        })),
+        W
+      );
+
+      // Find the exit (sideB) that is farthest from the chosen entrance.
+      const ic = innerCell(entrance, W, H);
+      const distFromEntrance = bfsDistances(grid, W, H, [coordToIndex(ic.x, ic.y, W)]);
+      const exit = farthestCandidate(
+        cB,
+        Object.fromEntries(cB.map(c => {
+          const eic = innerCell(c, W, H);
+          return [coordToIndex(c.x, c.y, W), distFromEntrance[coordToIndex(eic.x, eic.y, W)]];
+        })),
+        W
+      );
+
+      const eic = innerCell(exit, W, H);
+      const pathLength = distFromEntrance[coordToIndex(eic.x, eic.y, W)];
+      return { entrance, exit, pathLength };
     }
-    if (exitCandidates.length > 0) {
-      const ex = pickRandom(exitCandidates);
-      grid[coordToIndex(ex.x, ex.y, W)] = TOOL.EXIT;
-    }
+
+    const h = bestPairForAxis('top', 'bottom');
+    const v = bestPairForAxis('left', 'right');
+    let chosen;
+    if (!h && !v) return;
+    else if (!h) chosen = v;
+    else if (!v) chosen = h;
+    else chosen = h.pathLength >= v.pathLength ? h : v;
+
+    grid[coordToIndex(chosen.entrance.x, chosen.entrance.y, W)] = TOOL.ENTRANCE;
+    grid[coordToIndex(chosen.exit.x, chosen.exit.y, W)] = TOOL.EXIT;
   }
 }
 
@@ -157,6 +363,7 @@ export function generateMaze(width, height, endpointType) {
   }
 
   carve(grid, width, height, startX, startY, visited);
+  braid(grid, width, height, 0.3);
   placeEndpoints(grid, width, height, endpointType);
 
   return grid;

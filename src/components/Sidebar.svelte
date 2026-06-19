@@ -43,18 +43,46 @@
     <p class="text-xs text-base-content/60 mt-0.5">Hedge maze designer</p>
   </div>
 
+  <!-- Solve -->
+  <section>
+    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Solve</h2>
+    <div class="grid grid-cols-3 gap-1 md:grid-cols-2">
+      <button
+        class="btn btn-sm w-full justify-start gap-2 rounded-sm {currentTool === TOOL.SOLVE ? 'btn-secondary' : 'btn-ghost'}"
+        onclick={() => (currentTool = TOOL.SOLVE)}
+      >
+        <Route size={14} />
+        Draw
+      </button>
+      <button
+        class="btn btn-sm w-full justify-start gap-2 rounded-sm btn-ghost"
+        onclick={() => autoSolve?.()}
+      >
+        <Wand2 size={14} />
+        Auto
+      </button>
+      <button
+        class="btn btn-sm w-full justify-start gap-2 rounded-sm btn-ghost"
+        onclick={() => eraseSolvePath?.()}
+      >
+        <Eraser size={14} />
+        Erase
+      </button>
+    </div>
+  </section>
+
   <!-- Endpoint type -->
   <section>
-    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Maze Type</h2>
+    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Objective</h2>
     <div class="join w-full">
       <button
-        class="btn btn-sm join-item flex-1 {endpointType === 'exit' ? 'btn-primary' : 'btn-ghost'}"
+        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'exit' ? 'btn-primary' : 'btn-ghost'}"
         onclick={() => (endpointType = 'exit')}
       >
         Exit
       </button>
       <button
-        class="btn btn-sm join-item flex-1 {endpointType === 'goal' ? 'btn-primary' : 'btn-ghost'}"
+        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'goal' ? 'btn-primary' : 'btn-ghost'}"
         onclick={() => (endpointType = 'goal')}
       >
         Goal
@@ -64,7 +92,7 @@
 
   <!-- Dimensions -->
   <section class="flex flex-col gap-3">
-    <h2 class="label-text font-semibold uppercase text-xs tracking-wider text-base-content/50">Dimensions</h2>
+    <h2 class="label-text font-semibold uppercase text-xs tracking-wider text-base-content/50">Size (Metres)</h2>
 
     <div class="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-1">
       <label class="flex flex-col gap-1">
@@ -91,41 +119,13 @@
     </div>
   </section>
 
-  <!-- Solve -->
-  <section>
-    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Solve</h2>
-    <div class="grid grid-cols-3 gap-1 md:grid-cols-1">
-      <button
-        class="btn btn-sm w-full justify-start gap-2 {currentTool === TOOL.SOLVE ? 'btn-secondary' : 'btn-ghost'}"
-        onclick={() => (currentTool = TOOL.SOLVE)}
-      >
-        <Route size={14} />
-        Draw
-      </button>
-      <button
-        class="btn btn-sm w-full justify-start gap-2 btn-ghost"
-        onclick={() => autoSolve?.()}
-      >
-        <Wand2 size={14} />
-        Auto
-      </button>
-      <button
-        class="btn btn-sm w-full justify-start gap-2 btn-ghost"
-        onclick={() => eraseSolvePath?.()}
-      >
-        <Eraser size={14} />
-        Erase
-      </button>
-    </div>
-  </section>
-
   <!-- Tool palette -->
   <section>
     <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Edit</h2>
-    <div class="grid grid-cols-3 gap-1 md:grid-cols-1">
+    <div class="grid grid-cols-3 gap-1 md:grid-cols-2">
       {#each tools as tool}
         <button
-          class="btn btn-sm w-full justify-start gap-2 {currentTool === tool.id ? tool.activeClass : 'btn-ghost'}"
+          class="btn btn-sm w-full justify-start gap-2 rounded-sm {currentTool === tool.id ? tool.activeClass : 'btn-ghost'}"
           onclick={() => (currentTool = tool.id)}
         >
           {#snippet icon(IconComp)}<IconComp size={14} />{/snippet}
@@ -138,7 +138,7 @@
 
   <!-- Actions -->
   <section class="flex flex-col gap-2 mt-auto">
-    <button class="btn btn-sm btn-outline gap-2 w-full" onclick={regenerate}>
+    <button class="btn btn-sm btn-outline gap-2 w-full rounded-sm" onclick={regenerate}>
       <RefreshCw size={14} />
       Regenerate
     </button>
