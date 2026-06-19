@@ -24,3 +24,5 @@ To run the project locally:
 
 #### License
 This project is open source and available under the GNU General Public License v3.0 (GPLv3).
+
+By Lewis Dryburgh, July 2026
