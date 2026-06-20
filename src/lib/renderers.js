@@ -95,9 +95,9 @@ export function renderSolvePath(ctx, solvePath, color) {
 
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'flat';
+  ctx.lineJoin = 'flat';
 
   ctx.beginPath();
   let penDown = false;
@@ -115,6 +115,22 @@ export function renderSolvePath(ctx, solvePath, color) {
   }
   ctx.stroke();
   ctx.restore();
+}
+
+/**
+ * Redraws entrance, exit, and goal cells on top of the main canvas so they
+ * appear above the solve path line (higher z-order).
+ */
+export function renderOverlayCells(ctx, gridData, W, H, cellSize, colors) {
+  const OVERLAY_TILES = new Set([TOOL.ENTRANCE, TOOL.EXIT, TOOL.PLAZA]);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const tile = gridData[coordToIndex(x, y, W)];
+      if (OVERLAY_TILES.has(tile)) {
+        drawSquareCell(ctx, x, y, cellSize, colors[tile]);
+      }
+    }
+  }
 }
 
 /**

@@ -7,6 +7,7 @@
     buildOffscreenCanvas,
     renderFrame,
     renderSolvePath,
+    renderOverlayCells,
     paintSingleCell,
     getCanvasSize
   } from '../lib/renderers.js';
@@ -111,6 +112,7 @@
     const colors = getThemeColors();
     renderFrame(ctx, offscreen, highlight, cellSize, colors, currentTool);
     renderSolvePath(ctx, solvePath, colors.solve);
+    renderOverlayCells(ctx, gridData, W, H, cellSize, colors);
   }
 
   function applyPaint(cell) {
