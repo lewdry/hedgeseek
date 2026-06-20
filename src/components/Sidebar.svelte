@@ -35,6 +35,12 @@
 
   // Canvas ref forwarded from CanvasView for the export button.
   let canvasEl = $state(null);
+
+  let sizeUnit = $state('METRES');
+
+  function toggleSizeUnit() {
+    sizeUnit = sizeUnit === 'METRES' ? 'YARDS' : 'METRES';
+  }
 </script>
 
 <aside class="flex flex-col w-full bg-base-200 border-t border-base-300 p-4 gap-5 shrink-0 md:order-first md:h-full md:w-60 md:min-w-52 md:border-t-0 md:border-r md:overflow-y-auto">
@@ -73,7 +79,16 @@
 
   <!-- Dimensions -->
   <section class="flex flex-col gap-3">
-    <h2 class="label-text font-semibold uppercase text-xs tracking-wider text-base-content/50">Size (Metres)</h2>
+    <h2 class="label-text font-semibold uppercase text-xs tracking-wider text-base-content/50">
+      Size (<button
+        type="button"
+        class="font-inherit text-inherit"
+        onclick={toggleSizeUnit}
+        aria-label="Toggle size unit"
+      >
+        {sizeUnit}
+      </button>)
+    </h2>
 
     <div class="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-1">
       <label class="flex flex-col gap-1">
