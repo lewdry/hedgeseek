@@ -40,7 +40,7 @@
 <aside class="flex flex-col w-full bg-base-200 border-t border-base-300 p-4 gap-5 shrink-0 md:order-first md:h-full md:w-60 md:min-w-52 md:border-t-0 md:border-r md:overflow-y-auto">
   <div>
     <h1 class="text-xl font-bold tracking-tight text-base-content">Hedge & Seek</h1>
-    <p class="text-xs text-base-content/60 mt-0.5">Hedge maze designer</p>
+    <p class="text-xs text-base-content/60 mt-0.5">Hedge maze builder</p>
   </div>
 
   <!-- Solve -->
@@ -67,25 +67,6 @@
       >
         <Eraser size={14} />
         Erase
-      </button>
-    </div>
-  </section>
-
-  <!-- Endpoint type -->
-  <section>
-    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Objective</h2>
-    <div class="join w-full">
-      <button
-        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'goal' ? 'btn-primary' : 'btn-ghost'}"
-        onclick={() => (endpointType = 'goal')}
-      >
-        Goal
-      </button>
-      <button
-        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'exit' ? 'btn-primary' : 'btn-ghost'}"
-        onclick={() => (endpointType = 'exit')}
-      >
-        Exit
       </button>
     </div>
   </section>
@@ -119,9 +100,28 @@
     </div>
   </section>
 
+  <!-- Endpoint type -->
+  <section>
+    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Objective</h2>
+    <div class="join w-full">
+      <button
+        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'goal' ? 'btn-primary' : 'btn-ghost'}"
+        onclick={() => (endpointType = 'goal')}
+      >
+        Goal
+      </button>
+      <button
+        class="btn btn-sm join-item flex-1 rounded-sm {endpointType === 'exit' ? 'btn-primary' : 'btn-ghost'}"
+        onclick={() => (endpointType = 'exit')}
+      >
+        Exit
+      </button>
+    </div>
+  </section>
+
   <!-- Tool palette -->
   <section>
-    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Edit</h2>
+    <h2 class="label-text font-semibold mb-2 uppercase text-xs tracking-wider text-base-content/50">Design</h2>
     <div class="grid grid-cols-3 gap-1 md:grid-cols-2">
       {#each tools as tool}
         <button
