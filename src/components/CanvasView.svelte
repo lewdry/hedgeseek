@@ -17,6 +17,7 @@
   let canvasEl = $state(null);
   let containerEl = $state(null);
   let offscreen = null;
+  let cachedColors = null;
   let highlightCell = $state(null);
   let isPainting = $state(false);
 
@@ -78,7 +79,8 @@
 
     if (!canvasEl || cs <= 0) return;
 
-    const colors = getThemeColors();
+    cachedColors = getThemeColors();
+    const colors = cachedColors;
     const { width, height } = getCanvasSize(w, h, cs);
     canvasEl.width = width;
     canvasEl.height = height;
@@ -107,12 +109,11 @@
   }
 
   function renderAll(highlight = highlightCell) {
-    if (!canvasEl || !offscreen) return;
+    if (!canvasEl || !offscreen || !cachedColors) return;
     const ctx = canvasEl.getContext('2d');
-    const colors = getThemeColors();
-    renderFrame(ctx, offscreen, highlight, cellSize, colors, currentTool);
-    renderSolvePath(ctx, solvePath, colors.solve);
-    renderOverlayCells(ctx, gridData, W, H, cellSize, colors);
+    renderFrame(ctx, offscreen, highlight, cellSize, cachedColors, currentTool);
+    renderSolvePath(ctx, solvePath, cachedColors.solve);
+    renderOverlayCells(ctx, gridData, W, H, cellSize, cachedColors);
   }
 
   function applyPaint(cell) {
@@ -121,8 +122,7 @@
     paintCell(index, currentTool);
 
     // Update offscreen in-place for partial repaint (no full rebuild).
-    const colors = getThemeColors();
-    paintSingleCell(offscreen, cell.x, cell.y, cellSize, colors, currentTool);
+    paintSingleCell(offscreen, cell.x, cell.y, cellSize, cachedColors, currentTool);
     renderAll();
   }
 

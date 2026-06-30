@@ -49,6 +49,9 @@ export function getCanvasSize(W, H, cellSize) {
 
 // --- Offscreen canvas ---
 
+// Module-level cache for the hedge dither pattern so paintSingleCell can reuse it.
+let cachedHedgePattern = null;
+
 /**
  * Builds an OffscreenCanvas containing the full static maze geometry.
  * Returns the offscreen canvas so the main canvas can copy it with drawImage().
@@ -61,6 +64,7 @@ export function buildOffscreenCanvas(gridData, W, H, cellSize, colors) {
   // Pre-render one dither tile and derive a repeating pattern from it.
   const hedgeTile = buildHedgeTile(colors[TOOL.HEDGE], colors.hedgeDither);
   const hedgePattern = ctx.createPattern(hedgeTile, 'repeat');
+  cachedHedgePattern = hedgePattern;
 
   drawSquareGrid(ctx, gridData, W, H, cellSize, colors, hedgePattern);
 
@@ -139,10 +143,8 @@ export function renderOverlayCells(ctx, gridData, W, H, cellSize, colors) {
  */
 export function paintSingleCell(offscreen, x, y, cellSize, colors, tileType) {
   const ctx = offscreen.getContext('2d');
-  let fill = colors[tileType];
-  if (tileType === TOOL.HEDGE) {
-    const hedgeTile = buildHedgeTile(colors[TOOL.HEDGE], colors.hedgeDither);
-    fill = ctx.createPattern(hedgeTile, 'repeat');
-  }
+  const fill = (tileType === TOOL.HEDGE && cachedHedgePattern)
+    ? cachedHedgePattern
+    : colors[tileType];
   drawSquareCell(ctx, x, y, cellSize, fill);
 }

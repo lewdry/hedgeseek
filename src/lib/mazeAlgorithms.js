@@ -96,19 +96,18 @@ function braid(grid, W, H, amount) {
       if (closed.length === 0) continue;
 
       // Prefer walls leading into another dead end so two dead ends cancel each other.
-      closed.sort((a, b) => {
-        const deadEndScore = d => {
-          const neighbDirs = [
-            { wx: d.cx,     wy: d.cy - 1, cx: d.cx,     cy: d.cy - 2 },
-            { wx: d.cx,     wy: d.cy + 1, cx: d.cx,     cy: d.cy + 2 },
-            { wx: d.cx - 1, wy: d.cy,     cx: d.cx - 2, cy: d.cy     },
-            { wx: d.cx + 1, wy: d.cy,     cx: d.cx + 2, cy: d.cy     },
-          ].filter(n => n.cx >= 1 && n.cx < W - 1 && n.cy >= 1 && n.cy < H - 1);
-          const neighbourOpen = neighbDirs.filter(n => grid[coordToIndex(n.wx, n.wy, W)] === TOOL.PATH);
-          return neighbDirs.length > 0 && neighbourOpen.length === 1 ? 1 : 0;
-        };
-        return deadEndScore(b) - deadEndScore(a); // dead ends first
-      });
+      // Score each candidate once, then sort on cached score.
+      for (const d of closed) {
+        const neighbDirs = [
+          { wx: d.cx,     wy: d.cy - 1, cx: d.cx,     cy: d.cy - 2 },
+          { wx: d.cx,     wy: d.cy + 1, cx: d.cx,     cy: d.cy + 2 },
+          { wx: d.cx - 1, wy: d.cy,     cx: d.cx - 2, cy: d.cy     },
+          { wx: d.cx + 1, wy: d.cy,     cx: d.cx + 2, cy: d.cy     },
+        ].filter(n => n.cx >= 1 && n.cx < W - 1 && n.cy >= 1 && n.cy < H - 1);
+        const neighbourOpen = neighbDirs.filter(n => grid[coordToIndex(n.wx, n.wy, W)] === TOOL.PATH);
+        d._score = (neighbDirs.length > 0 && neighbourOpen.length === 1) ? 1 : 0;
+      }
+      closed.sort((a, b) => b._score - a._score);
 
       const pick = closed[0];
       grid[coordToIndex(pick.wx, pick.wy, W)] = TOOL.PATH;
@@ -118,20 +117,28 @@ function braid(grid, W, H, amount) {
 
 // Find the nearest valid carved cell to a target coordinate.
 function nearestPathCell(grid, W, H, targetX, targetY) {
-  let best = null;
-  let bestDist = Infinity;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      if (grid[coordToIndex(x, y, W)] === TOOL.PATH) {
-        const d = (x - targetX) ** 2 + (y - targetY) ** 2;
-        if (d < bestDist) {
-          bestDist = d;
-          best = { x, y };
-        }
-      }
+  const startIdx = coordToIndex(targetX, targetY, W);
+  if (grid[startIdx] === TOOL.PATH) return { x: targetX, y: targetY };
+
+  const visited = new Uint8Array(W * H);
+  const queue = [startIdx];
+  visited[startIdx] = 1;
+  let head = 0;
+
+  while (head < queue.length) {
+    const idx = queue[head++];
+    const x = idx % W, y = (idx - x) / W;
+    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      const ni = ny * W + nx;
+      if (visited[ni]) continue;
+      if (grid[ni] === TOOL.PATH) return { x: nx, y: ny };
+      visited[ni] = 1;
+      queue.push(ni);
     }
   }
-  return best;
+  return null;
 }
 
 function pickRandom(arr) {
@@ -262,7 +269,8 @@ function placeEndpoints(grid, W, H, endpointType) {
       for (const edge of edges) {
         const candidates = borderCandidates(grid, W, H, edge);
         if (candidates.length > 0) {
-          grid[coordToIndex(pickRandom(candidates).x, pickRandom(candidates).y, W)] = TOOL.ENTRANCE;
+          const pick = pickRandom(candidates);
+          grid[coordToIndex(pick.x, pick.y, W)] = TOOL.ENTRANCE;
           break;
         }
       }
@@ -392,9 +400,10 @@ export function solveMaze(gridData, W, H) {
   visited[startIdx] = 1;
 
   let found = -1;
+  let head = 0;
 
-  while (queue.length > 0) {
-    const idx = queue.shift();
+  while (head < queue.length) {
+    const idx = queue[head++];
 
     if (targetSet.has(idx)) {
       found = idx;
@@ -421,9 +430,10 @@ export function solveMaze(gridData, W, H) {
   const path = [];
   let cur = found;
   while (cur !== -1) {
-    path.unshift(indexToCoord(cur, W));
+    path.push(indexToCoord(cur, W));
     cur = parent[cur];
   }
+  path.reverse();
 
   return path;
 }
